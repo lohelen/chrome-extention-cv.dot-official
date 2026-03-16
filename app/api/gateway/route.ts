@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { action, jdText, cvText, userEmail, language } = body;
+    const { action, jdText, cvText, userEmail, language, runId } = body;
     const outputLanguage = language || 'en';
 
     let userTier: 'free' | 'pro' | 'premium' = 'free';
@@ -148,11 +148,63 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Check Rate Limits (only deduct once per "run")
-    //    The frontend sends action="run-all" which triggers all generations.
-    //    Individual actions like "optimize", "interview", "ats-swot", "cover-letter"
-    //    are also accepted but each one deducts 1 from the quota.
-    const limiter = limiters[userTier];
-    const { success, limit, remaining, reset } = await limiter.limit(rateLimitIdentifier);
+    let success = true, limit = 0, remaining = 0, reset = 0;
+
+    if (runId) {
+      const lockKey = `run_lock:${userTier}:${rateLimitIdentifier}:${runId}`;
+      const resultKey = `run_result:${userTier}:${rateLimitIdentifier}:${runId}`;
+
+      // Increment a counter for this runId
+      const reqCount = await redis.incr(lockKey);
+
+      if (reqCount === 1) {
+        // Set expiry for cleanup (e.g., 60 seconds)
+        await redis.expire(lockKey, 60);
+
+        // This is the first request of the batch, so consume 1 quota
+        const limiter = limiters[userTier as keyof typeof limiters];
+        const ratelimitResult = await limiter.limit(rateLimitIdentifier);
+
+        success = ratelimitResult.success;
+        limit = ratelimitResult.limit;
+        remaining = ratelimitResult.remaining;
+        reset = ratelimitResult.reset;
+
+        // Save the result for the other concurrent requests
+        await redis.set(resultKey, { success, limit, remaining, reset }, { ex: 60 });
+      } else {
+        // Wait for the first request to finish rate limiting and store the result
+        let storedResult: any = null;
+        for (let i = 0; i < 20; i++) { // Poll for up to 2 seconds
+          storedResult = await redis.get(resultKey);
+          if (storedResult) break;
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        if (storedResult) {
+          success = storedResult.success;
+          limit = storedResult.limit;
+          remaining = storedResult.remaining;
+          reset = storedResult.reset;
+        } else {
+          // Fallback if something went wrong
+          const limiter = limiters[userTier as keyof typeof limiters];
+          const ratelimitResult = await limiter.limit(rateLimitIdentifier);
+          success = ratelimitResult.success;
+          limit = ratelimitResult.limit;
+          remaining = ratelimitResult.remaining;
+          reset = ratelimitResult.reset;
+        }
+      }
+    } else {
+      // Backward compatibility if no runId is provided
+      const limiter = limiters[userTier as keyof typeof limiters];
+      const ratelimitResult = await limiter.limit(rateLimitIdentifier);
+      success = ratelimitResult.success;
+      limit = ratelimitResult.limit;
+      remaining = ratelimitResult.remaining;
+      reset = ratelimitResult.reset;
+    }
 
     if (!success) {
       return NextResponse.json({
@@ -228,7 +280,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: result,
-      quota: { limit, remaining: remaining - 1, reset: new Date(reset).toISOString() }
+      quota: { limit, remaining, reset: new Date(reset).toISOString() }
     }, { headers: corsHeaders });
 
   } catch (error: any) {
