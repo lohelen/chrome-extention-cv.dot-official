@@ -406,7 +406,7 @@ ${cvText}
 }
 
 IMPORTANT:
-- In the "keywords" array, return ONLY the keyword itself (e.g., "Google Ads", "SEO"). Do NOT include category prefixes.
+- In the "keywords" array, return ONLY an array of plain strings (e.g., ["Google Ads", "SEO"]). DO NOT RETURN AN ARRAY OF OBJECTS (e.g., [{"keyword": "SEO"}] is strictly forbidden).
 - Fix any spacing errors from PDF extraction (e.g., "M anaged" → "Managed").
 - In work experience sections, EVERY achievement must be a separate bullet point using "- " prefix. Do NOT write paragraphs.
 - The job title / company / date line should NOT have a bullet point prefix.
@@ -474,6 +474,7 @@ Return the response as a JSON object:
 }
 
 IMPORTANT:
+- The "questions" array MUST ONLY contain plain strings. DO NOT RETURN AN ARRAY OF OBJECTS (e.g., [{"question": "...", "category": "..."}] is strictly forbidden). You must return `["string1", "string2"]`.
 - Questions must directly reference specific keywords, tools, or responsibilities from the JD.
 - Questions must be insightful and challenging, not generic.
 - Each question should test a DIFFERENT aspect of the candidate's fitness for this specific role.`;
@@ -570,6 +571,7 @@ ${cvText}
 }
 
 IMPORTANT:
+- "missingKeywords", "swot.strengths", "swot.weaknesses", "swot.opportunities", and "swot.threats" MUST ALL BE ARRAYS OF PLAIN STRINGS ONLY. DO NOT RETURN ARRAYS OF OBJECTS for these fields.
 - Be strict but fair with the ATS score.
 - Every SWOT item must reference specific content from the CV or JD, not generic advice.
 - The scoreImprovementPlan must add up to show a clear path from the current score to 95+.
