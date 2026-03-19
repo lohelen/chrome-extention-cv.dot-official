@@ -8,7 +8,7 @@ const redis = Redis.fromEnv();
 const limiters = {
     free: new Ratelimit({
         redis,
-        limiter: Ratelimit.slidingWindow(3, '24 h'),
+        limiter: Ratelimit.slidingWindow(1, '24 h'),
         prefix: '@upstash/ratelimit/free'
     }),
     pro: new Ratelimit({
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
         // 2. We use limiter.getRemaining if it exists on this version of @upstash/ratelimit
         // If not, we have to fallback or use a small hack.
         let remaining = 0;
-        let limit = tier === 'free' ? 3 : (tier === 'pro' ? 10 : 9999);
+        let limit = tier === 'free' ? 1 : (tier === 'pro' ? 10 : 9999);
 
         try {
             // Many versions of @upstash/ratelimit support .getRemaining() or .get()

@@ -13,7 +13,7 @@ const redis = Redis.fromEnv();
 const limiters = {
   free: new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(3, '24 h'), // 3 uses per day
+    limiter: Ratelimit.slidingWindow(1, '24 h'), // 1 use per day
     prefix: '@upstash/ratelimit/free'
   }),
   pro: new Ratelimit({
@@ -269,9 +269,20 @@ export async function POST(req: NextRequest) {
         }
         break;
 
+      case 'linkedin-outreach':
+        if (!cvText) {
+          return NextResponse.json({ error: 'Missing cvText for LinkedIn outreach' }, { status: 400, headers: corsHeaders });
+        }
+        // ONLY ALLOW PREMIUM TO GENERATE LINKEDIN OUTREACH
+        if (userTier !== 'premium') {
+          return NextResponse.json({ error: 'This feature requires a Premium subscription.' }, { status: 403, headers: corsHeaders });
+        }
+        result = await generateLinkedInOutreach(apiKey, jdText, cvText, outputLanguage, model);
+        break;
+
       default:
         return NextResponse.json(
-          { error: 'Invalid action. Must be: optimize, interview, ats-swot, or cover-letter' },
+          { error: 'Invalid action. Must be: optimize, interview, ats-swot, cover-letter, or linkedin-outreach' },
           { status: 400, headers: corsHeaders }
         );
     }
@@ -668,4 +679,99 @@ IMPORTANT:
   const data = await response.json();
   const text = data.choices[0].message.content;
   return safeJsonParse(text);
+}
+
+// ============================================================
+// AI Function: Generate LinkedIn Outreach Messages (Premium)
+// ============================================================
+async function generateLinkedInOutreach(apiKey: string, jdText: string, cvText: string, language: string, model: string) {
+  const lang = langInstruction(language);
+
+  const prompt = `
+${lang}
+
+## Your Role
+You are a networking expert and career strategist who helps job seekers craft compelling LinkedIn outreach messages that actually get responses.
+
+## Your Mission
+Based on the Job Description and the user's CV, generate exactly 3 different LinkedIn message templates for reaching out to the hiring team AFTER the user has already submitted their application. Each message should have a different style/tone.
+
+## STRICT RULES
+
+### Rule 1: KEEP IT SHORT
+LinkedIn messages should be 2-4 sentences maximum. Hiring managers receive hundreds of messages — brevity wins.
+
+### Rule 2: BE SPECIFIC
+Reference the actual role name and company from the JD. Mention 1 specific skill or achievement from the user's CV that is relevant.
+
+### Rule 3: DO NOT BE GENERIC
+Avoid phrases like "I'm passionate about..." or "I'm excited to...". Be direct and professional.
+
+### Rule 4: USE [Name] PLACEHOLDER
+Always start with "Hi [Name]," — the user will fill in the actual name.
+
+## Input
+
+**Job Description:**
+${jdText}
+
+**User's CV:**
+${cvText}
+
+## Required JSON Output Format
+{
+  "messages": [
+    {
+      "style": "professional",
+      "label": "Professional & Direct",
+      "message": "Hi [Name], I've just applied for the [Role] role at [Company]..."
+    },
+    {
+      "style": "achievement",
+      "label": "Achievement-Focused",
+      "message": "Hi [Name], I wanted to reach out after applying for [Role]..."
+    },
+    {
+      "style": "enthusiastic",
+      "label": "Enthusiastic & Personal",
+      "message": "Hi [Name], just sent in my application for [Role]..."
+    }
+  ]
+}
+
+IMPORTANT:
+- Each message must be 2-4 sentences.
+- Each message must reference the ACTUAL role and company from the JD.
+- Each message should incorporate at least ONE real skill/experience from the user's CV.
+- Messages should feel natural, not templated.
+- End each message with the user's name if visible in the CV, otherwise omit it.
+`;
+
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      "model": model,
+      "response_format": { "type": "json_object" },
+      "messages": [
+        { "role": "user", "content": prompt }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`OpenRouter API error: ${response.status} - ${errText}`);
+  }
+
+  const data = await response.json();
+  const text = data.choices[0].message.content;
+  const parsed = safeJsonParse(text);
+
+  if (Array.isArray(parsed)) return parsed;
+  if (parsed.messages && Array.isArray(parsed.messages)) return parsed.messages;
+  return [];
 }
