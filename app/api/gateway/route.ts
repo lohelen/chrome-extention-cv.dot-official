@@ -13,7 +13,7 @@ const redis = Redis.fromEnv();
 const limiters = {
   free: new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(1, '24 h'), // 1 use per day
+    limiter: Ratelimit.slidingWindow(3, '24 h'), // 3 uses per day
     prefix: '@upstash/ratelimit/free'
   }),
   pro: new Ratelimit({
