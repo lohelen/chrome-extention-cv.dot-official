@@ -693,10 +693,16 @@ async function generateLinkedInOutreach(apiKey: string, jdText: string, cvText: 
 ${lang}
 
 ## Your Role
-You are a networking expert and career strategist who helps job seekers craft compelling LinkedIn outreach messages that actually get responses.
+You are an expert career coach. Your task is to write 3 different LinkedIn outreach messages for your client to send to a recruiter or hiring manager.
+Your tone MUST be extremely polite, respectful, and professional. 
+Crucially, you must explicitly highlight WHAT VALUE the candidate brings to the company—focusing on bridging the candidate's skills with the company's presumed goals, based on the job description.
 
-## Your Mission
-Based on the Job Description and the user's CV, generate exactly 3 different LinkedIn message templates for reaching out to the hiring team AFTER the user has already submitted their application. Each message should have a different style/tone.
+Write three distinct variations:
+1. "Professional & Value-Driven": A standard, highly polite message focusing strictly on how the candidate's experience solves problems for the company.
+2. "Achievement & Impact-Focused": A message leading with a major relevant achievement, framed as value the company can immediately leverage.
+3. "Enthusiastic & Forward-Looking": A warm, polite message showing deep passion for the company's mission while still emphasizing the tangible skills the candidate can contribute.
+
+Keep each message under 500 characters. Use placeholders like [Name], [Company], or [Role] where appropriate.
 
 ## STRICT RULES
 
