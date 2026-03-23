@@ -474,7 +474,7 @@ Return the response as a JSON object:
 }
 
 IMPORTANT:
-- The "questions" array MUST ONLY contain plain strings. DO NOT RETURN AN ARRAY OF OBJECTS (e.g., [{"question": "...", "category": "..."}] is strictly forbidden). You must return `["string1", "string2"]`.
+- The "questions" array MUST ONLY contain plain strings. DO NOT RETURN AN ARRAY OF OBJECTS (e.g., [{"question": "...", "category": "..."}] is strictly forbidden). You must return '["string1", "string2"]'.
 - Questions must directly reference specific keywords, tools, or responsibilities from the JD.
 - Questions must be insightful and challenging, not generic.
 - Each question should test a DIFFERENT aspect of the candidate's fitness for this specific role.`;
