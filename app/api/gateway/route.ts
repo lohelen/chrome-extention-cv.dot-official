@@ -420,6 +420,7 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
+      "thinking": { "type": "disabled" },
       "response_format": { "type": "json_object" },
       "messages": [
         { "role": "user", "content": prompt }
@@ -487,6 +488,7 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
+      "thinking": { "type": "disabled" },
       "response_format": { "type": "json_object" },
       "messages": [
         { "role": "user", "content": prompt }
@@ -585,6 +587,7 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
+      "thinking": { "type": "disabled" },
       "response_format": { "type": "json_object" },
       "messages": [
         { "role": "user", "content": prompt }
@@ -666,6 +669,7 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
+      "thinking": { "type": "disabled" },
       "response_format": { "type": "json_object" },
       "messages": [
         { "role": "user", "content": prompt }
@@ -763,6 +767,7 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
+      "thinking": { "type": "disabled" },
       "response_format": { "type": "json_object" },
       "messages": [
         { "role": "user", "content": prompt }
