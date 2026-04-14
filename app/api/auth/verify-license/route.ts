@@ -1,6 +1,7 @@
 export const runtime = 'edge'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/app/lib/supabase'
 
 // Lemon Squeezy IDs — hardcoded for security validation
 const STORE_ID = 321397
@@ -65,10 +66,10 @@ export async function POST(request: NextRequest) {
       }
 
       // Use validate response data instead
-      return handleLicenseResponse(validateData, email)
+      return await handleLicenseResponse(validateData, email)
     }
 
-    return handleLicenseResponse(lsData, email)
+    return await handleLicenseResponse(lsData, email)
   } catch (error) {
     console.error('License verification error:', error)
     return NextResponse.json(
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function handleLicenseResponse(data: any, email?: string) {
+async function handleLicenseResponse(data: any, email?: string) {
   const meta = data.meta
   const licenseKey = data.license_key
 
@@ -130,6 +131,20 @@ function handleLicenseResponse(data: any, email?: string) {
     tier = 'premium'
   } else if (meta?.variant_id === PRO_VARIANT_ID) {
     tier = 'pro'
+  }
+
+  // Update Supabase users tier to ensure Quota limits work
+  if (email && tier !== 'free') {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ tier, plan_status: 'active' })
+        .eq('email', email);
+      
+      if (error) console.error('Failed to update Supabase user tier:', error);
+    } catch (err) {
+      console.error('Supabase update exception:', err);
+    }
   }
 
   return NextResponse.json({
