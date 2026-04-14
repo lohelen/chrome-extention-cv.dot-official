@@ -134,7 +134,7 @@ async function handleLicenseResponse(data: any, email?: string) {
   }
 
   // Update Supabase users tier to ensure Quota limits work
-  if (email && tier !== 'free') {
+  if (email) {
     try {
       // Use .upsert with lowercased email to force the update/creation of the user record
       const cleanEmail = email.trim().toLowerCase();
