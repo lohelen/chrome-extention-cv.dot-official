@@ -136,11 +136,15 @@ async function handleLicenseResponse(data: any, email?: string) {
   // Update Supabase users tier to ensure Quota limits work
   if (email && tier !== 'free') {
     try {
-      const { error } = await supabase
+      // Use .eq with lowercased email to match PostgreSQL exact string safety, and trim spaces
+      const cleanEmail = email.trim().toLowerCase();
+      const { error, data } = await supabase
         .from('users')
         .update({ tier, plan_status: 'active' })
-        .eq('email', email);
+        .ilike('email', cleanEmail)
+        .select();
       
+      console.log("Supabase update tier attempt:", { email: cleanEmail, tier, error, data });
       if (error) console.error('Failed to update Supabase user tier:', error);
     } catch (err) {
       console.error('Supabase update exception:', err);
