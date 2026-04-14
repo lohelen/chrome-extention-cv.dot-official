@@ -125,7 +125,7 @@ async function handleLicenseResponse(data: any, email?: string) {
   }
 
   // Determine tier based on variant_id
-  let tier: 'pro' | 'premium' = 'pro'
+  let tier: 'free' | 'pro' | 'premium' = 'pro'
 
   if (meta?.variant_id === PREMIUM_VARIANT_ID) {
     tier = 'premium'
