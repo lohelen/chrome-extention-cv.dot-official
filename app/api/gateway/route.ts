@@ -420,6 +420,7 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
+      "max_tokens": 4000,
       "reasoning": { "effort": model.includes('pro') ? "low" : "none" },
       "response_format": { "type": "json_object" },
       "messages": [
@@ -488,6 +489,7 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
+      "max_tokens": 4000,
       "reasoning": { "effort": model.includes('pro') ? "low" : "none" },
       "response_format": { "type": "json_object" },
       "messages": [
@@ -587,6 +589,7 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
+      "max_tokens": 4000,
       "reasoning": { "effort": model.includes('pro') ? "low" : "none" },
       "response_format": { "type": "json_object" },
       "messages": [
@@ -669,6 +672,7 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
+      "max_tokens": 4000,
       "reasoning": { "effort": model.includes('pro') ? "low" : "none" },
       "response_format": { "type": "json_object" },
       "messages": [
@@ -767,6 +771,7 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
+      "max_tokens": 4000,
       "reasoning": { "effort": model.includes('pro') ? "low" : "none" },
       "response_format": { "type": "json_object" },
       "messages": [
