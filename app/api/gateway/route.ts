@@ -39,47 +39,82 @@ function getModel(userTier: string): string {
 // Helper function to clean JSON responses from AI
 function cleanJsonResponse(text: string): string {
   let cleaned = text.trim();
-  // Remove markdown code fences
-  if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```(?:json)?\n?/i, '').replace(/```\s*$/, '').trim();
-  }
-  // Remove any leading/trailing non-JSON characters
+  // Remove markdown code fences (```json ... ``` or ``` ... ```)
+  cleaned = cleaned.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+
+  // Find the outermost JSON structure
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
   const firstBracket = cleaned.indexOf('[');
   const lastBracket = cleaned.lastIndexOf(']');
 
-  if (firstBrace !== -1 && lastBrace !== -1) {
-    if (firstBracket !== -1 && firstBracket < firstBrace) {
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    if (firstBracket !== -1 && firstBracket < firstBrace && lastBracket > lastBrace) {
       cleaned = cleaned.substring(firstBracket, lastBracket + 1);
     } else {
       cleaned = cleaned.substring(firstBrace, lastBrace + 1);
     }
+  } else if (firstBracket !== -1 && lastBracket > firstBracket) {
+    cleaned = cleaned.substring(firstBracket, lastBracket + 1);
   }
   return cleaned;
+}
+
+// Attempt to repair truncated JSON (e.g. when max_tokens cuts off the response)
+function repairTruncatedJson(text: string): string {
+  let repaired = text.trim();
+  // Count open vs close braces and brackets
+  let openBraces = 0, openBrackets = 0;
+  let inString = false, escape = false;
+  for (const ch of repaired) {
+    if (escape) { escape = false; continue; }
+    if (ch === '\\') { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') openBraces++;
+    if (ch === '}') openBraces--;
+    if (ch === '[') openBrackets++;
+    if (ch === ']') openBrackets--;
+  }
+  // If we're inside a string, close it
+  if (inString) repaired += '"';
+  // Remove any trailing comma
+  repaired = repaired.replace(/,\s*$/, '');
+  // Close any unclosed brackets and braces
+  while (openBrackets > 0) { repaired += ']'; openBrackets--; }
+  while (openBraces > 0) { repaired += '}'; openBraces--; }
+  return repaired;
 }
 
 // Safely parse JSON with error recovery
 function safeJsonParse(text: string): any {
   const cleaned = cleanJsonResponse(text);
+  // Attempt 1: Direct parse
   try {
     return JSON.parse(cleaned);
+  } catch (e) { /* continue to recovery */ }
+
+  // Attempt 2: Fix common issues (trailing commas, control chars)
+  let fixed = cleaned
+    .replace(/,\s*}/g, '}')
+    .replace(/,\s*]/g, ']')
+    .replace(/[\x00-\x1F\x7F]/g, (ch) => {
+      if (ch === '\n') return '\\n';
+      if (ch === '\r') return '\\r';
+      if (ch === '\t') return '\\t';
+      return '';
+    });
+  try {
+    return JSON.parse(fixed);
+  } catch (e) { /* continue to repair */ }
+
+  // Attempt 3: Try to repair truncated JSON
+  try {
+    const repaired = repairTruncatedJson(fixed);
+    return JSON.parse(repaired);
   } catch (e) {
-    let fixed = cleaned
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']')
-      .replace(/[\x00-\x1F\x7F]/g, (ch) => {
-        if (ch === '\n') return '\\n';
-        if (ch === '\r') return '\\r';
-        if (ch === '\t') return '\\t';
-        return '';
-      });
-    try {
-      return JSON.parse(fixed);
-    } catch (e2) {
-      console.error('JSON parse failed even after cleanup. Raw text:', text.substring(0, 500));
-      throw new Error('AI returned invalid JSON. Please try again.');
-    }
+    console.error('JSON parse failed after all recovery attempts. Raw text (first 1000 chars):', text.substring(0, 1000));
+    throw new Error('AI returned invalid JSON. Please try again.');
   }
 }
 
@@ -420,10 +455,11 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
-      "max_tokens": 4000,
+      "max_tokens": 8000,
       "reasoning": { "effort": model.includes('pro') ? "low" : "none" },
       "response_format": { "type": "json_object" },
       "messages": [
+        { "role": "system", "content": "You are a JSON-only API. Return ONLY valid JSON. No markdown, no explanations, no text before or after the JSON object." },
         { "role": "user", "content": prompt }
       ]
     })
@@ -489,10 +525,11 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
-      "max_tokens": 4000,
+      "max_tokens": 8000,
       "reasoning": { "effort": model.includes('pro') ? "low" : "none" },
       "response_format": { "type": "json_object" },
       "messages": [
+        { "role": "system", "content": "You are a JSON-only API. Return ONLY valid JSON. No markdown, no explanations, no text before or after the JSON object." },
         { "role": "user", "content": prompt }
       ]
     })
@@ -589,10 +626,11 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
-      "max_tokens": 4000,
+      "max_tokens": 8000,
       "reasoning": { "effort": model.includes('pro') ? "low" : "none" },
       "response_format": { "type": "json_object" },
       "messages": [
+        { "role": "system", "content": "You are a JSON-only API. Return ONLY valid JSON. No markdown, no explanations, no text before or after the JSON object." },
         { "role": "user", "content": prompt }
       ]
     })
@@ -672,10 +710,11 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
-      "max_tokens": 4000,
+      "max_tokens": 8000,
       "reasoning": { "effort": model.includes('pro') ? "low" : "none" },
       "response_format": { "type": "json_object" },
       "messages": [
+        { "role": "system", "content": "You are a JSON-only API. Return ONLY valid JSON. No markdown, no explanations, no text before or after the JSON object." },
         { "role": "user", "content": prompt }
       ]
     })
@@ -771,10 +810,11 @@ IMPORTANT:
     },
     body: JSON.stringify({
       "model": model,
-      "max_tokens": 4000,
+      "max_tokens": 8000,
       "reasoning": { "effort": model.includes('pro') ? "low" : "none" },
       "response_format": { "type": "json_object" },
       "messages": [
+        { "role": "system", "content": "You are a JSON-only API. Return ONLY valid JSON. No markdown, no explanations, no text before or after the JSON object." },
         { "role": "user", "content": prompt }
       ]
     })
